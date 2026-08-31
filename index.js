@@ -1,8 +1,13 @@
 const express = require("express")
+const cors = require("cors")
 const app = express()
 require('dotenv').config()
-const { MongoClient } = require("mongodb");
+const { MongoClient, ObjectId } = require("mongodb");
 const port = process.env.PORT || 5000
+
+
+app.use(express.json())
+
 
 app.get("/", (req, res) => {
     res.send("Budget Tracker with Charts Server")
@@ -16,6 +21,34 @@ const client = new MongoClient(uri)
 async function run() {
     try {
         await client.connect()
+         
+        const expenseCollection = client.db("expenseDB").collection("expenses")
+
+        app.post("/expenses",async(req,res) =>{
+            const expenses = req.body;
+            const result = await expenseCollection.insertOne(expenses)
+            res.send(result)
+        })
+
+        app.get("/expenses",async(req,res) =>{
+            const userId = req.query?.userId;
+             const category = req?.query?.category;
+             const query = {userId:userId}
+             if(category){
+                query.category = category
+             }
+             const result = await expenseCollection.find(query).toArray()
+             res.send(result)
+        })
+
+        app.delete("/expenses/:id",async(req,res) =>{
+            const id = req.params.id;
+            const query = {_id : new ObjectId(id)}
+            const result = await expenseCollection.deleteOne(query)
+            res.send(result)
+        })
+        
+
         console.log("You successfully connected to MongoDB!");
     }
     catch(error){
